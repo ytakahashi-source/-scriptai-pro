@@ -1,15 +1,512 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#07090f" />
-    <title>ScriptAI Pro - 提案スクリプト生成</title>
-    <style>
-      body { margin: 0; background: #07090f; }
-    </style>
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ScriptAI Pro - 提案スクリプト生成</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: #07090f; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #080d1a; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    input, textarea { box-sizing: border-box; max-width: 100%; }
+    input:focus, textarea:focus { border-color: rgba(245,158,11,0.5) !important; outline: none; }
+    button { transition: all 0.15s; cursor: pointer; }
+    button:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    td, th { word-break: break-word; overflow-wrap: break-word; }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+    const SYSTEM_PROMPT = `あなたは、建設・不動産・営業職領域に強いトップ1%のキャリアアドバイザー兼営業戦略家です。
+
+あなたの役割は、求職者の履歴書・職務経歴書・面談ログ・通話ログと、企業名・企業HP・求人票・Web上の公開情報を統合し、求職者から面接意思を獲得するための「最も魅力的で、再現性があり、現場でそのまま使える提案スクリプト」を作成することです。
+
+目的は求人紹介ではありません。
+目的は、求職者が「この企業なら一度話を聞いてみる価値がある」と納得できる理由を、本人の経歴・希望条件・転職理由・懸念・意思決定軸に接続して設計することです。
+
+# 最重要原則
+1. 求人の魅力を一般論で語らない。必ず求職者の具体的な経歴・発言・希望・懸念と接続して提案する。
+2. 企業を過剰に美化しない。魅力だけでなく、懸念点・確認すべき点・ミスマッチリスクも明示する。
+3. 事実と推測を分ける。
+4. 根拠のない断定をしない。
+5. 提案のゴールは「面接意思の獲得」とする。
+6. 求職者に押し売りしない。
+7. CAがそのまま使える言葉にする。
+8. 情報が不足している場合は推測で補完せず「追加確認事項」として分ける。
+
+# 出力フォーマット
+必ず以下の形式で，## 1. 〜 ## 12. まで全セクションを出力してください。
+
+## 1. 結論
+- この求職者にこの企業を提案すべきか：
+- 提案優先度：高 / 中 / 低
+- 面接意思獲得見込み：高 / 中 / 低
+- 最も刺さる提案軸：
+- 注意すべき懸念：
+
+## 2. 求職者理解
+### 経歴要約
+### 活かせる経験
+### 強み
+### 転職理由
+### 本質的な意思決定軸
+### 懸念
+### 提案時に使うべき言葉
+### 避けるべき言葉
+
+## 3. 企業理解
+### 企業概要
+### 求人の魅力
+### 求人の懸念
+### 求職者に刺さる要素
+### 追加確認が必要な要素
+
+## 4. マッチング仮説
+| 観点 | 内容 | 提案での使い方 |
+|---|---|---|
+| 経験接続 |  |  |
+| 希望条件接続 |  |  |
+| 転職理由接続 |  |  |
+| キャリア接続 |  |  |
+| 懸念解消 |  |  |
+| ミスマッチリスク |  |  |
+
+## 5. 提案戦略
+### メイン提案軸
+### サブ提案軸
+### 先に伝えるべきこと
+### 後から補足すること
+### 言わない方がいいこと
+### クロージング方針
+
+## 6. 電話・Zoom用 提案スクリプト
+自然な会話口調で、CAがそのまま読める形で作成してください。
+
+## 7. LINE/SMS用 短文提案
+300文字以内で作成してください。
+
+## 8. 面接意思確認トーク
+求職者が自然に「一度話を聞いてみたい」と思える聞き方にしてください。
+
+## 9. 想定反論と切り返し
+| 反論 | 切り返し |
+|---|---|
+| 興味ないです |  |
+| 今じゃないです |  |
+| 他社で進んでいます |  |
+| 年収が不安です |  |
+| 仕事内容が合うか不安です |  |
+| 会社の規模が不安です |  |
+| 通勤が不安です |  |
+| 休日が不安です |  |
+| 面接が面倒です |  |
+| もう少し考えたいです |  |
+| 求人票だけ見たいです |  |
+
+## 10. 面接前フォローメッセージ
+面接辞退を防ぎ、面接への納得度を上げる文面を作成してください。
+
+## 11. CA向け注意点
+- この求職者に対して注意すべきこと
+- 押しすぎてはいけないポイント
+- 面接意思を取るために必ず確認すべきこと
+
+## 12. 情報の根拠と不確実性
+### 確認できた事実
+### 求職者情報から読み取れる事実
+### 推測にとどまる仮説
+### 追加確認すべき情報`;
+
+    const SECTIONS = [
+      { id:"s1",  label:"結論",              icon:"🎯" },
+      { id:"s2",  label:"求職者理解",        icon:"👤" },
+      { id:"s3",  label:"企業理解",          icon:"🏢" },
+      { id:"s4",  label:"マッチング仮説",    icon:"🔗" },
+      { id:"s5",  label:"提案戦略",          icon:"⚔️"  },
+      { id:"s6",  label:"電話スクリプト",    icon:"📞" },
+      { id:"s7",  label:"LINE/SMS",          icon:"💬" },
+      { id:"s8",  label:"意思確認トーク",    icon:"✅" },
+      { id:"s9",  label:"反論切り返し",      icon:"🛡️"  },
+      { id:"s10", label:"フォローメッセージ",icon:"📩" },
+      { id:"s11", label:"CA向け注意点",      icon:"⚠️"  },
+      { id:"s12", label:"根拠・不確実性",    icon:"🔍" },
+    ];
+
+    function parseSections(text) {
+      const result = {};
+      const parts = text.split(/(?=^## \d+\.)/m);
+      parts.forEach(part => {
+        const m = part.match(/^## (\d+)\./);
+        if (m) result[`s${m[1]}`] = part.replace(/^## \d+\.[^\n]*\n/, "").trim();
+      });
+      return result;
+    }
+
+    function inlineRender(text) {
+      return text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+        p.startsWith("**") && p.endsWith("**")
+          ? React.createElement("strong", { key:i, style:{color:"#f1f5f9",fontWeight:"700"} }, p.replace(/\*\*/g,""))
+          : p
+      );
+    }
+
+    const T = {
+      table: { borderCollapse:"collapse", width:"100%", fontSize:"13px", border:"1px solid rgba(245,158,11,0.15)" },
+      th: { background:"rgba(245,158,11,0.1)", color:"#fbbf24", padding:"9px 14px", textAlign:"left", fontWeight:"700", borderBottom:"1px solid rgba(245,158,11,0.2)" },
+      td: { color:"#cbd5e1", padding:"9px 14px", borderBottom:"1px solid rgba(255,255,255,0.04)", verticalAlign:"top", lineHeight:"1.7" },
+      h1: { fontSize:"18px", fontWeight:"800", color:"#f59e0b", margin:"20px 0 10px" },
+      h2: { fontSize:"16px", fontWeight:"700", color:"#fbbf24", margin:"18px 0 8px" },
+      h3: { fontSize:"13px", fontWeight:"700", color:"#64748b", margin:"14px 0 6px", textTransform:"uppercase", letterSpacing:"0.07em" },
+      p:  { fontSize:"14px", lineHeight:"1.85", color:"#cbd5e1", margin:"4px 0" },
+      li: { fontSize:"14px", lineHeight:"1.85", color:"#cbd5e1", marginLeft:"18px", marginBottom:"4px" },
+      hr: { border:"none", borderTop:"1px solid #1e293b", margin:"16px 0" },
+    };
+
+    function RenderMd({ text }) {
+      if (!text) return <p style={{color:"#475569",fontStyle:"italic",fontSize:"14px"}}>データなし</p>;
+      const lines = text.split("\n");
+      const elements = [];
+      let tableLines = [], inTable = false;
+
+      const flushTable = () => {
+        if (tableLines.length < 2) { tableLines=[]; inTable=false; return; }
+        const headers = tableLines[0].split("|").map(c=>c.trim()).filter(Boolean);
+        const rows = tableLines.slice(2).filter(r=>!r.match(/^[\s|:-]+$/));
+        elements.push(
+          <div key={`t${elements.length}`} style={{overflowX:"auto",margin:"14px 0"}}>
+            <table style={T.table}>
+              <thead><tr>{headers.map((h,i)=><th key={i} style={T.th}>{h}</th>)}</tr></thead>
+              <tbody>{rows.map((row,ri)=>{
+                const cells=row.split("|").map(c=>c.trim()).filter(Boolean);
+                return <tr key={ri} style={{background:ri%2===0?"rgba(255,255,255,0.02)":"transparent"}}>
+                  {cells.map((c,ci)=><td key={ci} style={T.td}>{c}</td>)}
+                </tr>;
+              })}</tbody>
+            </table>
+          </div>
+        );
+        tableLines=[]; inTable=false;
+      };
+
+      lines.forEach((line,i)=>{
+        if (line.startsWith("|")) { inTable=true; tableLines.push(line); return; }
+        if (inTable) flushTable();
+        if (line.startsWith("### ")) elements.push(<h3 key={i} style={T.h3}>{line.slice(4)}</h3>);
+        else if (line.startsWith("## ")) elements.push(<h2 key={i} style={T.h2}>{line.slice(3)}</h2>);
+        else if (line.startsWith("# ")) elements.push(<h1 key={i} style={T.h1}>{line.slice(2)}</h1>);
+        else if (line.match(/^[-*] /)) elements.push(<li key={i} style={T.li}>{inlineRender(line.replace(/^[-*] /,""))}</li>);
+        else if (line.match(/^\d+\. /)) elements.push(<li key={i} style={{...T.li,listStyle:"decimal inside"}}>{inlineRender(line.replace(/^\d+\. /,""))}</li>);
+        else if (line==="---") elements.push(<hr key={i} style={T.hr}/>);
+        else if (line.trim()==="") elements.push(<br key={i}/>);
+        else elements.push(<p key={i} style={T.p}>{inlineRender(line)}</p>);
+      });
+      if (inTable) flushTable();
+      return <div>{elements}</div>;
+    }
+
+    const St = {
+      root: { minHeight:"100vh", background:"#07090f", color:"#e2e8f0", fontFamily:"'Noto Sans JP','Hiragino Sans',sans-serif", position:"relative", overflowX:"hidden" },
+      bgGlow: { position:"fixed", inset:0, zIndex:0, pointerEvents:"none", background:"radial-gradient(ellipse at 20% 10%, rgba(245,158,11,0.07) 0%, transparent 50%), radial-gradient(ellipse at 80% 90%, rgba(99,102,241,0.05) 0%, transparent 50%)" },
+      header: { padding:"16px 20px 12px", borderBottom:"1px solid rgba(245,158,11,0.1)", position:"relative", zIndex:1 },
+      hInner: { maxWidth:"960px", margin:"0 auto" },
+      logoRow: { display:"flex", alignItems:"center", gap:"8px", marginBottom:"4px", flexWrap:"wrap" },
+      logoMark: { fontSize:"20px" },
+      logoTxt: { fontSize:"22px", fontWeight:"800", color:"#f59e0b", letterSpacing:"-0.5px" },
+      logoPro: { background:"linear-gradient(135deg,#f59e0b,#d97706)", color:"#07090f", fontSize:"10px", fontWeight:"800", padding:"1px 6px", borderRadius:"3px" },
+      logoSep: { color:"#1e293b", fontSize:"16px" },
+      logoSub: { fontSize:"12px", color:"#475569" },
+      tagline: { color:"#334155", fontSize:"11px", margin:0, lineHeight:"1.5" },
+      main: { maxWidth:"860px", margin:"0 auto", padding:"16px 12px 60px", position:"relative", zIndex:1, width:"100%" },
+      stepNav: { display:"flex", gap:"8px", marginBottom:"8px" },
+      stepBtn: { flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:"6px", padding:"10px 8px", background:"rgba(15,23,42,0.6)", border:"1px solid #1a2540", borderRadius:"10px", color:"#475569", fontSize:"13px", fontWeight:"700", minWidth:0 },
+      stepOn: { background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.3)", color:"#f59e0b" },
+      checkMark: { background:"rgba(34,197,94,0.15)", color:"#86efac", fontSize:"11px", padding:"1px 5px", borderRadius:"4px" },
+      barTrack: { height:"2px", background:"#1a2540", borderRadius:"2px", marginBottom:"16px" },
+      barFill: { height:"100%", background:"linear-gradient(90deg,#f59e0b,#fbbf24)", borderRadius:"2px", transition:"width 0.4s ease" },
+      card: { background:"rgba(10,16,30,0.9)", border:"1px solid rgba(245,158,11,0.12)", borderRadius:"14px", padding:"20px 16px" },
+      cardTitle: { fontSize:"17px", fontWeight:"700", color:"#f1f5f9", margin:"0 0 4px" },
+      cardDesc: { color:"#475569", fontSize:"12px", margin:"0 0 18px" },
+      g3: { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))", gap:"10px" },
+      g2: { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:"10px" },
+      field: { display:"flex", flexDirection:"column", gap:"4px", marginBottom:"12px" },
+      label: { fontSize:"11px", fontWeight:"700", color:"#475569", textTransform:"uppercase", letterSpacing:"0.07em" },
+      hint: { fontSize:"11px", color:"#475569", fontStyle:"italic", lineHeight:"1.4" },
+      input: { background:"#090e1c", border:"1px solid #1a2540", borderRadius:"7px", padding:"9px 11px", color:"#e2e8f0", fontSize:"14px", fontFamily:"inherit", width:"100%" },
+      textarea: { background:"#090e1c", border:"1px solid #1a2540", borderRadius:"7px", padding:"9px 11px", color:"#e2e8f0", fontSize:"14px", resize:"vertical", fontFamily:"inherit", lineHeight:"1.7", width:"100%" },
+      uploadGrid: { display:"flex", flexDirection:"column", gap:"12px", margin:"14px 0" },
+      uploadBox: { background:"rgba(9,14,28,0.7)", border:"1px dashed #1a2540", borderRadius:"10px", padding:"14px" },
+      uploadTitle: { fontSize:"12px", fontWeight:"700", color:"#64748b", margin:"0 0 8px" },
+      fileBtn: { display:"inline-block", background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.2)", color:"#f59e0b", padding:"5px 12px", borderRadius:"5px", fontSize:"12px", fontWeight:"700", whiteSpace:"nowrap", cursor:"pointer" },
+      infoBox: { display:"flex", gap:"12px", alignItems:"flex-start", background:"rgba(59,130,246,0.05)", border:"1px solid rgba(59,130,246,0.15)", borderRadius:"9px", padding:"11px 14px", marginBottom:"18px" },
+      errBox: { background:"rgba(239,68,68,0.07)", border:"1px solid rgba(239,68,68,0.2)", color:"#fca5a5", borderRadius:"8px", padding:"10px 13px", fontSize:"13px", marginBottom:"12px" },
+      btnRight: { display:"flex", justifyContent:"flex-end", marginTop:"8px" },
+      btnRow: { display:"flex", justifyContent:"space-between", alignItems:"center", gap:"10px", flexWrap:"wrap", marginTop:"8px" },
+      nextBtn: { background:"linear-gradient(135deg,#f59e0b,#d97706)", color:"#07090f", border:"none", borderRadius:"9px", padding:"11px 24px", fontSize:"14px", fontWeight:"800" },
+      backBtn: { background:"transparent", border:"1px solid #1a2540", color:"#64748b", borderRadius:"9px", padding:"11px 18px", fontSize:"13px" },
+      genBtn: { background:"linear-gradient(135deg,#f59e0b,#d97706)", color:"#07090f", border:"none", borderRadius:"9px", padding:"12px 24px", fontSize:"13px", fontWeight:"800", display:"flex", alignItems:"center", gap:"8px", flexShrink:0 },
+      spin: { display:"inline-block", width:"13px", height:"13px", border:"2px solid rgba(0,0,0,0.2)", borderTop:"2px solid #000", borderRadius:"50%", animation:"spin 0.7s linear infinite", flexShrink:0 },
+      resultWrap: { maxWidth:"960px", margin:"0 auto", padding:"16px 12px 60px", position:"relative", zIndex:1, width:"100%" },
+      rHead: { display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"14px", gap:"10px", flexWrap:"wrap" },
+      rBadge: { display:"inline-block", background:"rgba(34,197,94,0.12)", border:"1px solid rgba(34,197,94,0.25)", color:"#86efac", fontSize:"10px", fontWeight:"800", padding:"2px 7px", borderRadius:"4px", marginBottom:"4px" },
+      rTitle: { fontSize:"18px", fontWeight:"800", color:"#f1f5f9", margin:"0" },
+      rMeta: { color:"#334155", fontSize:"12px", margin:"4px 0 0" },
+      rActions: { display:"flex", gap:"6px", flexWrap:"wrap" },
+      btnCopy: { background:"rgba(245,158,11,0.08)", border:"1px solid rgba(245,158,11,0.25)", color:"#f59e0b", padding:"7px 12px", borderRadius:"7px", fontSize:"12px", fontWeight:"700" },
+      btnRegen: { background:"rgba(99,102,241,0.08)", border:"1px solid rgba(99,102,241,0.22)", color:"#a5b4fc", padding:"7px 12px", borderRadius:"7px", fontSize:"12px", fontWeight:"700" },
+      btnNew: { background:"rgba(34,197,94,0.07)", border:"1px solid rgba(34,197,94,0.18)", color:"#86efac", padding:"7px 12px", borderRadius:"7px", fontSize:"12px", fontWeight:"700" },
+      tabBar: { display:"flex", gap:"4px", overflowX:"auto", paddingBottom:"8px", marginBottom:"10px", WebkitOverflowScrolling:"touch", scrollbarWidth:"none" },
+      tab: { flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", gap:"2px", padding:"8px 10px", background:"rgba(10,16,30,0.8)", border:"1px solid #1a2540", borderRadius:"8px", color:"#475569", whiteSpace:"nowrap", minWidth:"62px", fontSize:"14px" },
+      tabOn: { background:"rgba(245,158,11,0.1)", border:"1px solid rgba(245,158,11,0.35)", color:"#f59e0b" },
+      secCard: { background:"rgba(10,16,30,0.92)", border:"1px solid rgba(245,158,11,0.1)", borderRadius:"14px", padding:"20px 16px", marginBottom:"10px", minHeight:"260px" },
+      secHead: { display:"flex", alignItems:"center", gap:"10px", marginBottom:"14px", paddingBottom:"12px", borderBottom:"1px solid rgba(245,158,11,0.08)" },
+      secTitle: { fontSize:"15px", fontWeight:"700", color:"#f1f5f9", margin:0, flex:1 },
+      secCopy: { flexShrink:0, background:"rgba(255,255,255,0.04)", border:"1px solid #1a2540", color:"#64748b", padding:"4px 10px", borderRadius:"5px", fontSize:"11px" },
+      secBody: { lineHeight:"1.85", wordBreak:"break-word" },
+      qNav: { display:"flex", gap:"4px", justifyContent:"center", marginBottom:"14px", flexWrap:"wrap" },
+      qBtn: { width:"28px", height:"28px", background:"rgba(10,16,30,0.8)", border:"1px solid #1a2540", borderRadius:"5px", color:"#475569", fontSize:"11px", fontWeight:"700", display:"flex", alignItems:"center", justifyContent:"center" },
+      qBtnOn: { background:"rgba(245,158,11,0.12)", border:"1px solid rgba(245,158,11,0.35)", color:"#f59e0b" },
+      tips: { background:"rgba(34,197,94,0.03)", border:"1px solid rgba(34,197,94,0.12)", borderRadius:"10px", padding:"13px 16px" },
+    };
+
+    function App() {
+      const [inputStep, setInputStep] = useState(0);
+      const [view, setView] = useState("input");
+      const [activeTab, setActiveTab] = useState("s1");
+      const [cand, setCand] = useState({ name:"", age:"", currentRole:"", currentIncome:"", desiredIncome:"", location:"", transferReason:"", desiredConditions:"", concerns:"", resume:"", interview:"" });
+      const [comp, setComp] = useState({ name:"", url:"", jobDescription:"", hiringBackground:"", additionalInfo:"" });
+      const [sections, setSections] = useState({});
+      const [rawText, setRawText] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [loadMsg, setLoadMsg] = useState("");
+      const [error, setError] = useState("");
+      const resultRef = useRef(null);
+
+      const readFile = (e, field, setter) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => setter(p => ({ ...p, [field]: ev.target.result }));
+        reader.readAsText(file);
+      };
+
+      const generate = async () => {
+        setLoading(true); setError(""); setSections({}); setRawText("");
+        const msgs = ["🔍 企業情報をWeb検索中...","🧠 求職者プロファイルを分析中...","🔗 マッチング仮説を構築中...","✍️ 提案スクリプトを生成中...","🛡️ 反論・切り返しを設計中...","✅ 品質チェック中..."];
+        let mi = 0; setLoadMsg(msgs[0]);
+        const iv = setInterval(() => { mi=(mi+1)%msgs.length; setLoadMsg(msgs[mi]); }, 2600);
+        try {
+          const msg = `# 求職者情報\n氏名: ${cand.name||"未入力"} ／ 年齢: ${cand.age||"未入力"} ／ 現職: ${cand.currentRole||"未入力"}\n現年収: ${cand.currentIncome||"未入力"} ／ 希望年収: ${cand.desiredIncome||"未入力"} ／ 居住地: ${cand.location||"未入力"}\n\n## 転職理由\n${cand.transferReason||"未入力"}\n\n## 希望条件\n${cand.desiredConditions||"未入力"}\n\n## 懸念・不安\n${cand.concerns||"未入力"}\n\n## 履歴書・職務経歴書\n${cand.resume||"未入力"}\n\n## 面談ログ\n${cand.interview||"未入力"}\n\n---\n\n# 提案先企業情報\n企業名: ${comp.name} ／ URL: ${comp.url||"未入力"}\n採用背景: ${comp.hiringBackground||"未入力"}\n補足: ${comp.additionalInfo||"未入力"}\n\n## 求人票・募集要項\n${comp.jobDescription||"未入力"}\n\n---\n${comp.url?"企業URLが提供されています。Web検索で最新情報を収集してスクリプトに反映してください。":""}\n指定フォーマット（## 1. 結論 〜 ## 12. 情報の根拠と不確実性）に従い、全12セクションを完全に出力してください。`;
+          const tools = comp.url ? [{type:"web_search_20250305",name:"web_search"}] : undefined;
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, system:SYSTEM_PROMPT, messages:[{role:"user",content:msg}], ...(tools?{tools}:{}) }),
+          });
+          const data = await res.json();
+          const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+          if (!text && data.error) throw new Error(data.error.message);
+          setRawText(text);
+          setSections(parseSections(text));
+          setView("result");
+          setActiveTab("s1");
+          setTimeout(()=>resultRef.current?.scrollIntoView({behavior:"smooth"}),100);
+        } catch(e) {
+          setError(`エラー: ${e.message}`);
+        } finally {
+          clearInterval(iv); setLoading(false); setLoadMsg("");
+        }
+      };
+
+      const F = ({label,hint,children}) => (
+        <div style={St.field}>
+          <label style={St.label}>{label}</label>
+          {hint && <span style={St.hint}>{hint}</span>}
+          {children}
+        </div>
+      );
+      const Inp = ({label,hint,value,onChange,placeholder}) => (
+        <F label={label} hint={hint}>
+          <input style={St.input} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>
+        </F>
+      );
+      const TA = ({label,hint,value,onChange,placeholder,rows=4}) => (
+        <F label={label} hint={hint}>
+          <textarea style={St.textarea} rows={rows} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}/>
+        </F>
+      );
+      const sc = (setter,k,v) => setter(p=>({...p,[k]:v}));
+
+      return (
+        <div style={St.root}>
+          <div style={St.bgGlow}/>
+          <header style={St.header}>
+            <div style={St.hInner}>
+              <div style={St.logoRow}>
+                <span style={St.logoMark}>⚡</span>
+                <span style={St.logoTxt}>ScriptAI</span>
+                <span style={St.logoPro}>Pro</span>
+                <span style={St.logoSep}>|</span>
+                <span style={St.logoSub}>建設・不動産・営業職特化</span>
+              </div>
+              <p style={St.tagline}>トップ1% CAの提案ロジックを再現 ／ 面接意思獲得に特化した12セクション自動生成</p>
+            </div>
+          </header>
+
+          {view==="input" && (
+            <div style={St.main}>
+              <div style={St.stepNav}>
+                {[{i:0,icon:"👤",lbl:"求職者情報"},{i:1,icon:"🏢",lbl:"企業情報"}].map(({i,icon,lbl})=>(
+                  <button key={i} style={{...St.stepBtn,...(inputStep===i?St.stepOn:{})}} onClick={()=>setInputStep(i)}>
+                    <span style={{fontSize:"16px"}}>{icon}</span><span>{lbl}</span>
+                    {inputStep>i && <span style={St.checkMark}>✓</span>}
+                  </button>
+                ))}
+              </div>
+              <div style={St.barTrack}><div style={{...St.barFill,width:inputStep===0?"33%":"66%"}}/></div>
+
+              {inputStep===0 && (
+                <div style={{...St.card,animation:"fadeIn 0.3s ease"}}>
+                  <h2 style={St.cardTitle}>👤 求職者情報</h2>
+                  <p style={St.cardDesc}>経歴・本人発言・懸念を詳細に入れるほど、スクリプト精度が上がります</p>
+                  <div style={St.g3}>
+                    <Inp label="氏名" value={cand.name} onChange={v=>sc(setCand,"name",v)} placeholder="山田 太郎"/>
+                    <Inp label="年齢" value={cand.age} onChange={v=>sc(setCand,"age",v)} placeholder="34歳"/>
+                    <Inp label="現職・役職" value={cand.currentRole} onChange={v=>sc(setCand,"currentRole",v)} placeholder="施工管理 主任"/>
+                  </div>
+                  <div style={St.g3}>
+                    <Inp label="現年収" value={cand.currentIncome} onChange={v=>sc(setCand,"currentIncome",v)} placeholder="450万円"/>
+                    <Inp label="希望年収" value={cand.desiredIncome} onChange={v=>sc(setCand,"desiredIncome",v)} placeholder="550万円以上"/>
+                    <Inp label="居住地" value={cand.location} onChange={v=>sc(setCand,"location",v)} placeholder="東京都 江東区"/>
+                  </div>
+                  <TA label="転職理由（本人の発言・コメント）" hint="💡 面談でのリアルな言葉をそのまま入れると精度UP" value={cand.transferReason} onChange={v=>sc(setCand,"transferReason",v)} rows={3} placeholder='例：「現場の裁量が少ない。もっと提案できる環境に行きたい」'/>
+                  <TA label="希望条件（表面・本質）" value={cand.desiredConditions} onChange={v=>sc(setCand,"desiredConditions",v)} rows={3} placeholder="年収・勤務地・休日・キャリアパス・職種など"/>
+                  <TA label="懸念・不安（本人発言）" hint="💡 断りそうな理由を先回りするために重要" value={cand.concerns} onChange={v=>sc(setCand,"concerns",v)} rows={3} placeholder='例：「転職回数が多い」「小さい会社は嫌だ」など'/>
+                  <div style={St.uploadGrid}>
+                    <div style={St.uploadBox}>
+                      <p style={St.uploadTitle}>📄 履歴書・職務経歴書</p>
+                      <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"6px"}}>
+                        <input type="file" accept=".txt,.docx,.vtt,.srt" id="r1" style={{display:"none"}} onChange={e=>readFile(e,"resume",setCand)}/>
+                        <label htmlFor="r1" style={St.fileBtn}>ファイルをアップロード</label>
+                        <span style={St.hint}>.txt 対応</span>
+                      </div>
+                      <textarea style={St.textarea} rows={5} value={cand.resume} onChange={e=>setCand(p=>({...p,resume:e.target.value}))} placeholder="または直接テキストを貼り付け..."/>
+                    </div>
+                    <div style={St.uploadBox}>
+                      <p style={St.uploadTitle}>🎙️ 面談ログ（Zoom / Phone）</p>
+                      <div style={{display:"flex",alignItems:"center",gap:"10px",marginBottom:"6px"}}>
+                        <input type="file" accept=".txt,.vtt,.srt" id="i1" style={{display:"none"}} onChange={e=>readFile(e,"interview",setCand)}/>
+                        <label htmlFor="i1" style={St.fileBtn}>ファイルをアップロード</label>
+                        <span style={St.hint}>.txt / .vtt 対応</span>
+                      </div>
+                      <textarea style={St.textarea} rows={5} value={cand.interview} onChange={e=>setCand(p=>({...p,interview:e.target.value}))} placeholder="面談での発言・印象・気になったコメントを貼り付け..."/>
+                    </div>
+                  </div>
+                  <div style={St.btnRight}>
+                    <button style={St.nextBtn} onClick={()=>setInputStep(1)}>企業情報へ →</button>
+                  </div>
+                </div>
+              )}
+
+              {inputStep===1 && (
+                <div style={{...St.card,animation:"fadeIn 0.3s ease"}}>
+                  <h2 style={St.cardTitle}>🏢 提案先企業情報</h2>
+                  <p style={St.cardDesc}>HPのURLを入力すると、AIがWeb検索で最新情報を自動収集・反映します</p>
+                  <div style={St.g2}>
+                    <Inp label="企業名 *" value={comp.name} onChange={v=>sc(setComp,"name",v)} placeholder="株式会社〇〇建設"/>
+                    <Inp label="企業HP URL" value={comp.url} onChange={v=>sc(setComp,"url",v)} placeholder="https://example.co.jp"/>
+                  </div>
+                  <TA label="📋 求人票・募集要項" rows={7} value={comp.jobDescription} onChange={v=>sc(setComp,"jobDescription",v)} placeholder="求人票の全文・募集ポジション・求めるスキル・年収レンジをまるごと貼り付けてください"/>
+                  <TA label="採用背景・担当者メモ（任意）" hint="💡 採用担当者の発言・会社の課題・緊急度など" value={comp.hiringBackground} onChange={v=>sc(setComp,"hiringBackground",v)} rows={3} placeholder='例：「施工管理が1名退職予定で即戦力が必要」'/>
+                  <TA label="その他補足（任意）" value={comp.additionalInfo} onChange={v=>sc(setComp,"additionalInfo",v)} rows={2} placeholder="過去の選考実績・社風・CA所感など"/>
+                  {comp.url && (
+                    <div style={St.infoBox}>
+                      <span style={{fontSize:"20px"}}>🤖</span>
+                      <div>
+                        <strong style={{color:"#93c5fd",fontSize:"13px"}}>Web自動収集が有効</strong>
+                        <p style={{margin:"2px 0 0",fontSize:"12px",color:"#475569"}}>{comp.url} の最新情報をAIが検索してスクリプトに反映します</p>
+                      </div>
+                    </div>
+                  )}
+                  {error && <div style={St.errBox}>{error}</div>}
+                  <div style={St.btnRow}>
+                    <button style={St.backBtn} onClick={()=>setInputStep(0)}>← 戻る</button>
+                    <button style={{...St.genBtn,opacity:(loading||!comp.name)?0.55:1}} disabled={loading||!comp.name} onClick={generate}>
+                      {loading ? <><span style={St.spin}/><span>{loadMsg}</span></> : <><span>✨</span><span>12セクション 提案スクリプトを生成する</span></>}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {view==="result" && (
+            <div style={St.resultWrap} ref={resultRef}>
+              <div style={St.rHead}>
+                <div>
+                  <span style={St.rBadge}>完成</span>
+                  <h2 style={St.rTitle}>提案スクリプト</h2>
+                  <p style={St.rMeta}>{cand.name||"求職者"} → {comp.name} ／ {new Date().toLocaleDateString("ja-JP")}</p>
+                </div>
+                <div style={St.rActions}>
+                  <button style={St.btnCopy} onClick={()=>navigator.clipboard.writeText(rawText)}>📋 全文コピー</button>
+                  <button style={St.btnRegen} onClick={()=>{setView("input");setInputStep(1);}}>🔄 再生成</button>
+                  <button style={St.btnNew} onClick={()=>{setView("input");setInputStep(0);setSections({});}}>＋ 新規</button>
+                </div>
+              </div>
+              <div style={St.tabBar}>
+                {SECTIONS.map(sec=>(
+                  <button key={sec.id} style={{...St.tab,...(activeTab===sec.id?St.tabOn:{})}} onClick={()=>setActiveTab(sec.id)}>
+                    <span style={{fontSize:"15px"}}>{sec.icon}</span>
+                    <span style={{fontSize:"10px",marginTop:"2px"}}>{sec.label}</span>
+                  </button>
+                ))}
+              </div>
+              {SECTIONS.map(sec=>activeTab===sec.id&&(
+                <div key={sec.id} style={{...St.secCard,animation:"fadeIn 0.2s ease"}}>
+                  <div style={St.secHead}>
+                    <span style={{fontSize:"22px"}}>{sec.icon}</span>
+                    <h3 style={St.secTitle}>{sec.label}</h3>
+                    <button style={St.secCopy} onClick={()=>navigator.clipboard.writeText(sections[sec.id]||"")}>コピー</button>
+                  </div>
+                  <div style={St.secBody}>
+                    {sections[sec.id] ? <RenderMd text={sections[sec.id]}/> : <p style={{color:"#334155",fontStyle:"italic",fontSize:"14px"}}>このセクションのデータが見当たりません。「全文コピー」で確認してください。</p>}
+                  </div>
+                </div>
+              ))}
+              <div style={St.qNav}>
+                {SECTIONS.map((sec,i)=>(
+                  <button key={sec.id} style={{...St.qBtn,...(activeTab===sec.id?St.qBtnOn:{})}} onClick={()=>setActiveTab(sec.id)} title={sec.label}>{i+1}</button>
+                ))}
+              </div>
+              <div style={St.tips}>
+                <strong style={{color:"#86efac",fontSize:"13px"}}>💡 活用のヒント</strong>
+                <div style={{display:"flex",gap:"20px",flexWrap:"wrap",marginTop:"8px"}}>
+                  {["📞 「電話スクリプト」タブをそのまま読み上げる","💬 「LINE/SMS」タブをコピーして即送信","🛡️ 「反論切り返し」タブで断り対応を事前準備","⚠️ 「CA向け注意点」タブで押しすぎを防止"].map((t,i)=>(
+                    <span key={i} style={{fontSize:"12px",color:"#475569"}}>{t}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App/>);
+  </script>
+</body>
 </html>
